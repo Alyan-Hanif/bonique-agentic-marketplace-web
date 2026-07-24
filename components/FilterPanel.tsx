@@ -48,15 +48,15 @@ export default function FilterPanel({
     filters.maxPrice < priceRange.max;
 
   return (
-    <aside className="space-y-6 rounded-lg border border-stone-200 bg-white p-5">
+    <aside className="space-y-6 border border-neutral-200 bg-white p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-900">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-900">
           Filters
         </h2>
         {hasActiveFilters && (
           <button
             onClick={resetFilters}
-            className="text-xs text-stone-500 underline hover:text-stone-900"
+            className="text-xs text-neutral-500 underline hover:text-neutral-900"
           >
             Clear all
           </button>
@@ -64,7 +64,7 @@ export default function FilterPanel({
       </div>
 
       <div>
-        <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-stone-500">
+        <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
           Size
         </h3>
         <div className="flex flex-wrap gap-2">
@@ -72,10 +72,10 @@ export default function FilterPanel({
             <button
               key={size}
               onClick={() => toggleSize(size)}
-              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+              className={`border px-3 py-1 text-xs font-medium transition-colors ${
                 filters.sizes.includes(size)
-                  ? "border-stone-900 bg-stone-900 text-white"
-                  : "border-stone-200 text-stone-600 hover:border-stone-400"
+                  ? "border-neutral-900 bg-neutral-900 text-white"
+                  : "border-neutral-200 text-neutral-600 hover:border-neutral-900"
               }`}
             >
               {size}
@@ -85,11 +85,11 @@ export default function FilterPanel({
       </div>
 
       <div>
-        <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-stone-500">
+        <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
           Price Range
         </h3>
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs text-stone-600">
+          <div className="flex items-center justify-between text-xs font-medium text-neutral-600">
             <span>${filters.minPrice}</span>
             <span>${filters.maxPrice}</span>
           </div>
@@ -104,7 +104,7 @@ export default function FilterPanel({
                 minPrice: Math.min(Number(e.target.value), filters.maxPrice - 1),
               })
             }
-            className="w-full accent-stone-900"
+            className="w-full accent-neutral-900"
           />
           <input
             type="range"
@@ -117,13 +117,13 @@ export default function FilterPanel({
                 maxPrice: Math.max(Number(e.target.value), filters.minPrice + 1),
               })
             }
-            className="w-full accent-stone-900"
+            className="w-full accent-neutral-900"
           />
         </div>
       </div>
 
       <div>
-        <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-stone-500">
+        <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
           Color
         </h3>
         <div className="flex flex-wrap gap-2">
@@ -131,10 +131,10 @@ export default function FilterPanel({
             <button
               key={color}
               onClick={() => toggleColor(color)}
-              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+              className={`border px-3 py-1 text-xs font-medium transition-colors ${
                 filters.colors.includes(color)
-                  ? "border-stone-900 bg-stone-900 text-white"
-                  : "border-stone-200 text-stone-600 hover:border-stone-400"
+                  ? "border-neutral-900 bg-neutral-900 text-white"
+                  : "border-neutral-200 text-neutral-600 hover:border-neutral-900"
               }`}
             >
               {color}

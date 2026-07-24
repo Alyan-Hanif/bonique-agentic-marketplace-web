@@ -9,11 +9,19 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        serif: ["var(--font-cormorant)", "Cormorant Garamond", "serif"],
+        sans: ["var(--font-cormorant)", "Cormorant Garamond", "serif"],
       },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        brand: {
+          black: "var(--brand-black)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          dark: "var(--accent-dark)",
+        },
       },
     },
   },

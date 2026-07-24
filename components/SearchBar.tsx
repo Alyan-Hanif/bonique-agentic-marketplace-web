@@ -9,7 +9,7 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
   return (
     <div className="relative w-full">
       <svg
-        className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-400"
+        className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -23,10 +23,10 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
       </svg>
       <input
         type="search"
-        placeholder="Search by title or brand..."
+        placeholder="Search by title, brand, or style..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-full border border-stone-200 bg-white py-3 pl-12 pr-4 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
+        className="w-full border border-neutral-200 bg-neutral-50 py-3.5 pl-12 pr-4 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:bg-white focus:outline-none"
       />
     </div>
   );

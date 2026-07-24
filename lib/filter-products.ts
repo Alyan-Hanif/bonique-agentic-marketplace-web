@@ -9,7 +9,8 @@ export function filterProducts(
     if (
       searchLower &&
       !product.title.toLowerCase().includes(searchLower) &&
-      !product.brand.toLowerCase().includes(searchLower)
+      !product.brand.toLowerCase().includes(searchLower) &&
+      !product.description.toLowerCase().includes(searchLower)
     ) {
       return false;
     }

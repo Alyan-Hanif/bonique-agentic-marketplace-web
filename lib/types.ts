@@ -4,6 +4,8 @@ export interface Product {
   brand: string;
   price: number;
   currency: string;
+  description: string;
+  department: "men" | "women" | "kids" | "unisex";
   styleCategories: string[];
   fabricComposition: string;
   careInstructions: string;
