@@ -34,8 +34,16 @@ export default function TryOnModal({
   };
 
   useEffect(() => {
-    if (!open) resetState();
+    if (!open) {
+      resetState();
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     return () => {
+      document.body.style.overflow = previousOverflow;
       if (timerRef.current) clearTimeout(timerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -76,17 +84,17 @@ export default function TryOnModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-neutral-900">Try It On</h2>
-            <p className="text-xs text-neutral-500 line-clamp-1">{productTitle}</p>
+      <div className="relative flex h-[min(90dvh,36rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:h-[min(88dvh,40rem)]">
+        <div className="flex shrink-0 items-center justify-between border-b border-neutral-200 px-4 py-3 sm:px-5">
+          <div className="min-w-0 pr-3">
+            <h2 className="text-base font-bold tracking-tight text-neutral-900 sm:text-lg">Try It On</h2>
+            <p className="truncate text-xs text-neutral-500">{productTitle}</p>
           </div>
           <button
             onClick={handleClose}
-            className="rounded-full p-1 text-neutral-400 hover:bg-neutral-100"
+            className="shrink-0 rounded-full p-1 text-neutral-400 hover:bg-neutral-100"
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -95,7 +103,7 @@ export default function TryOnModal({
           </button>
         </div>
 
-        <div className="space-y-4 p-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:gap-4 sm:p-4">
           {/*
             Placeholder UI only — actual virtual try-on image generation/processing
             will be implemented by the AI developer using a vision model.
@@ -103,9 +111,9 @@ export default function TryOnModal({
           {state === "idle" && (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 bg-neutral-50 px-6 py-12 transition-colors hover:border-accent hover:bg-accent/5"
+              className="flex min-h-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 bg-neutral-50 px-4 py-6 text-center transition-colors hover:border-accent hover:bg-accent/5 sm:px-6"
             >
-              <svg className="mb-3 h-10 w-10 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="mb-2 h-9 w-9 text-neutral-400 sm:mb-3 sm:h-10 sm:w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
               </svg>
@@ -125,54 +133,57 @@ export default function TryOnModal({
           />
 
           {uploadPreview && state !== "idle" && (
-            <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-neutral-100">
-              <Image
-                src={state === "done" ? tryOnMockResult : uploadPreview}
-                alt="Try-on preview"
-                fill
-                className={`object-cover transition-opacity duration-500 ${state === "loading" ? "opacity-40 blur-sm" : "opacity-100"}`}
-                unoptimized={state !== "done"}
-              />
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
+              <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-xl bg-neutral-900">
+                <Image
+                  src={state === "done" ? tryOnMockResult : uploadPreview}
+                  alt="Try-on preview"
+                  fill
+                  sizes="(max-width: 512px) 100vw, 512px"
+                  className={`object-contain object-center transition-opacity duration-500 ${state === "loading" ? "opacity-40 blur-sm" : "opacity-100"}`}
+                  unoptimized={state !== "done"}
+                />
 
-              {state === "loading" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 px-6">
-                  <svg className="mb-4 h-10 w-10 animate-spin text-accent" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  <p className="text-sm font-semibold text-white">Generating your try-on...</p>
-                  <p className="mt-1 text-xs text-white/70">This may take a few seconds</p>
-                  <div className="mt-4 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-white/20">
-                    <div
-                      className="h-full bg-accent transition-all duration-200"
-                      style={{ width: `${progress}%` }}
-                    />
+                {state === "loading" && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 px-4 sm:px-6">
+                    <svg className="mb-3 h-8 w-8 animate-spin text-accent sm:mb-4 sm:h-10 sm:w-10" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <p className="text-sm font-semibold text-white">Generating your try-on...</p>
+                    <p className="mt-1 text-xs text-white/70">This may take a few seconds</p>
+                    <div className="mt-3 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-white/20 sm:mt-4">
+                      <div
+                        className="h-full bg-accent transition-all duration-200"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-xs text-white/60 sm:mt-2">{progress}%</p>
                   </div>
-                  <p className="mt-2 text-xs text-white/60">{progress}%</p>
-                </div>
-              )}
+                )}
+
+                {state === "done" && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 sm:p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-accent sm:text-xs">
+                      AI Try-On Preview
+                    </p>
+                    <p className="text-xs text-white sm:text-sm">Here&apos;s how {productTitle} could look on you</p>
+                  </div>
+                )}
+              </div>
 
               {state === "done" && (
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-accent">
-                    AI Try-On Preview
-                  </p>
-                  <p className="text-sm text-white">Here&apos;s how {productTitle} could look on you</p>
-                </div>
+                <button
+                  onClick={() => {
+                    resetState();
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="shrink-0 border border-neutral-900 py-2.5 text-xs font-bold uppercase tracking-widest text-neutral-900 transition-colors hover:bg-neutral-50 sm:py-3 sm:text-sm"
+                >
+                  Try Another Photo
+                </button>
               )}
             </div>
-          )}
-
-          {state === "done" && (
-            <button
-              onClick={() => {
-                resetState();
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}
-              className="w-full border border-neutral-900 py-3 text-sm font-bold uppercase tracking-widest text-neutral-900 transition-colors hover:bg-neutral-50"
-            >
-              Try Another Photo
-            </button>
           )}
         </div>
       </div>

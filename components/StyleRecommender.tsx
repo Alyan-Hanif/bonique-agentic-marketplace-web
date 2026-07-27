@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 
 const DRAG_THRESHOLD = 8;
 const STORAGE_KEY = "bonique-style-fab-position";
+const FAB_SIZE = 64;
 
 interface Position {
   x: number;
@@ -14,8 +16,8 @@ interface Position {
 function getDefaultPosition(): Position {
   if (typeof window === "undefined") return { x: 24, y: 24 };
   return {
-    x: Math.max(16, window.innerWidth - 260),
-    y: Math.max(16, window.innerHeight - 88),
+    x: Math.max(16, window.innerWidth - FAB_SIZE - 24),
+    y: Math.max(16, window.innerHeight - FAB_SIZE - 48),
   };
 }
 
@@ -65,6 +67,7 @@ export default function StyleRecommender() {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!fabRef.current || !position) return;
+    e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     dragState.current = {
       active: true,
@@ -137,6 +140,8 @@ export default function StyleRecommender() {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onDragStart={(e) => e.preventDefault()}
+        onContextMenu={(e) => e.preventDefault()}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -144,24 +149,21 @@ export default function StyleRecommender() {
           }
         }}
         style={{ left: position.x, top: position.y }}
-        className="fixed z-50 flex max-w-[240px] cursor-grab items-center gap-3 rounded-2xl border border-accent/40 bg-black px-3 py-2.5 shadow-2xl transition-shadow active:cursor-grabbing active:shadow-accent/20 sm:max-w-[260px] sm:px-4 sm:py-3 touch-none select-none animate-pulse-glow"
+        className="drag-lock fixed z-50 flex cursor-grab flex-col items-center gap-2 touch-none select-none active:cursor-grabbing"
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-black">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-          </svg>
+        <div className="pointer-events-none flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-black p-2.5 shadow-2xl transition-shadow animate-pulse-glow active:shadow-accent/30">
+          <Image
+            src="/images/hero/logo-1.png"
+            alt=""
+            width={40}
+            height={40}
+            draggable={false}
+            className="pointer-events-none h-full w-full object-contain"
+          />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold leading-tight text-white">Find Your Style</p>
-          <p className="text-[11px] leading-tight text-accent sm:text-xs">
-            AI outfit picks — tap to start
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col gap-0.5 text-neutral-500" aria-hidden="true">
-          <span className="h-0.5 w-1 rounded-full bg-current" />
-          <span className="h-0.5 w-1 rounded-full bg-current" />
-          <span className="h-0.5 w-1 rounded-full bg-current" />
-        </div>
+        <span className="pointer-events-none max-w-[88px] rounded-full bg-black/90 px-2.5 py-1 text-center text-[9px] font-bold uppercase leading-tight tracking-wide text-white shadow-lg">
+          Find Your Style
+        </span>
       </div>
 
       {open && (

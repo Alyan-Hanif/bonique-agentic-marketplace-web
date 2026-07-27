@@ -17,17 +17,21 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative flex min-h-[70vh] items-center overflow-hidden sm:min-h-[80vh]">
+      <section
+        id="hero"
+        className="relative flex h-[calc(100dvh-var(--consumer-header-height,4rem))] min-h-[20rem] items-center overflow-hidden"
+      >
         <Image
           src={heroImage}
           alt="New season streetwear collection"
           fill
-          className="object-cover"
+          className="object-cover object-center"
+          sizes="100vw"
           priority
           unoptimized
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
-        <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6">
+        <div className="relative mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-white/80 sm:text-sm">
             SS26 Collection
           </p>
