@@ -1,3 +1,9 @@
+/**
+ * LEGACY MOCK CATALOG — kept for reference only.
+ * Runtime pages now load products from the NestJS API (see lib/api.ts).
+ * Do not import this file from app pages; seed data lives in
+ * bonique-backend/prisma/frontend-catalog.ts.
+ */
 import type { Merchant, MerchantProduct, Product, SyncJob } from "./types";
 import { productImageUrl, heroImage } from "./product-images";
 

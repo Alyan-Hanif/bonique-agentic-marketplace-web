@@ -1,17 +1,104 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import DashboardTable from "@/components/DashboardTable";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorMessage from "@/components/ErrorMessage";
+import { apiFetch } from "@/lib/api";
+import { authHeaders, clearAuth, getAccessToken, getAuthUser } from "@/lib/auth";
 import {
-  defaultMerchant,
-  getMerchantProducts,
-  syncJobs,
-} from "@/lib/dummy-data";
+  mapApiMerchantProduct,
+  mapSyncStatus,
+  type ApiMerchant,
+  type ApiProduct,
+  type ApiSyncJob,
+} from "@/lib/mappers";
+import type { MerchantProduct, SyncJob } from "@/lib/types";
 
 export default function DashboardPage() {
-  const products = getMerchantProducts(defaultMerchant.id);
-  const merchantSyncJob = syncJobs.find(
-    (job) => job.merchantName === defaultMerchant.businessName
-  );
+  const router = useRouter();
+  const [merchantName, setMerchantName] = useState("Your store");
+  const [products, setProducts] = useState<MerchantProduct[]>([]);
+  const [syncJob, setSyncJob] = useState<SyncJob | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    const user = getAuthUser();
+    if (!token || !user?.merchantId) {
+      router.replace("/login");
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    const headers = authHeaders();
+
+    Promise.all([
+      apiFetch<ApiMerchant>("/merchants/me", { headers }),
+      apiFetch<ApiProduct[]>(`/merchants/${user.merchantId}/products`, {
+        headers,
+      }),
+      apiFetch<ApiSyncJob[]>("/sync-jobs", { headers }),
+    ])
+      .then(([merchant, merchantProducts, jobs]) => {
+        if (cancelled) return;
+        setMerchantName(merchant.businessName);
+        setProducts(merchantProducts.map(mapApiMerchantProduct));
+
+        const latest = jobs[0];
+        if (latest) {
+          setSyncJob({
+            id: latest.id,
+            merchantName: merchant.businessName,
+            status: mapSyncStatus(latest.status),
+            lastSyncedAt:
+              latest.completedAt ||
+              latest.startedAt ||
+              latest.createdAt ||
+              new Date().toISOString(),
+          });
+        } else {
+          setSyncJob(null);
+        }
+      })
+      .catch((err: Error & { statusCode?: number }) => {
+        if (cancelled) return;
+        if (err.statusCode === 401) {
+          clearAuth();
+          router.replace("/login");
+          return;
+        }
+        setError(err.message || "Failed to load dashboard");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, reloadKey]);
+
+  if (loading) {
+    return <LoadingSpinner label="Loading dashboard..." />;
+  }
+
+  if (error) {
+    return (
+      <ErrorMessage
+        message={error}
+        onRetry={() => setReloadKey((k) => k + 1)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -21,7 +108,7 @@ export default function DashboardPage() {
             Dashboard
           </h1>
           <p className="mt-1 text-sm text-stone-500">
-            {defaultMerchant.businessName} — manage your connected store
+            {merchantName} — manage your connected store
           </p>
         </div>
         <Link
@@ -32,13 +119,13 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {merchantSyncJob && (
+      {syncJob && (
         <div className="flex items-center gap-3 rounded-lg border border-stone-200 bg-white p-4">
           <span className="text-sm text-stone-600">Store sync status:</span>
-          <SyncStatusBadge status={merchantSyncJob.status} />
+          <SyncStatusBadge status={syncJob.status} />
           <span className="text-xs text-stone-400">
             Last synced{" "}
-            {new Date(merchantSyncJob.lastSyncedAt).toLocaleString("en-US", {
+            {new Date(syncJob.lastSyncedAt).toLocaleString("en-US", {
               month: "short",
               day: "numeric",
               hour: "numeric",

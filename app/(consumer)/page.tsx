@@ -1,8 +1,19 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import ProductCard from "@/components/ProductCard";
-import { trendingProducts, heroImage } from "@/lib/dummy-data";
-import { editorialImage } from "@/lib/product-images";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorMessage from "@/components/ErrorMessage";
+import { heroImage, editorialImage } from "@/lib/product-images";
+import { apiFetch } from "@/lib/api";
+import {
+  getTrendingProducts,
+  mapApiProduct,
+  type ApiProduct,
+} from "@/lib/mappers";
+import type { Product } from "@/lib/types";
 
 const CATEGORIES = [
   { label: "New Arrivals", href: "/discover?category=new-arrivals" },
@@ -14,9 +25,36 @@ const CATEGORIES = [
 ];
 
 export default function HomePage() {
+  const [trending, setTrending] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    apiFetch<ApiProduct[]>("/products")
+      .then((data) => {
+        if (!cancelled) {
+          setTrending(getTrendingProducts(data.map(mapApiProduct)));
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setError(err.message || "Failed to load products");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
   return (
     <>
-      {/* Hero */}
       <section
         id="hero"
         className="relative flex h-[calc(100dvh-var(--consumer-header-height,4rem))] min-h-[20rem] items-center overflow-hidden"
@@ -41,7 +79,8 @@ export default function HomePage() {
             <span className="text-accent">Street Style</span>
           </h1>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-white/80 sm:text-base">
-            Bold fits. Fresh drops. Curated streetwear and fashion from the brands you love.
+            Bold fits. Fresh drops. Curated streetwear and fashion from the
+            brands you love.
           </p>
           <Link
             href="/discover"
@@ -52,7 +91,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Category chips */}
       <section className="border-b border-neutral-200 bg-white">
         <div className="mx-auto max-w-7xl overflow-x-auto px-4 py-4 sm:px-6">
           <div className="flex gap-3">
@@ -69,21 +107,27 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Promo banner */}
       <section className="bg-black py-3 text-center">
         <p className="text-xs font-semibold uppercase tracking-widest text-accent sm:text-sm">
-          Up to 40% off select styles — <Link href="/discover?category=sale" className="underline underline-offset-2">Shop the Sale</Link>
+          Up to 40% off select styles —{" "}
+          <Link
+            href="/discover?category=sale"
+            className="underline underline-offset-2"
+          >
+            Shop the Sale
+          </Link>
         </p>
       </section>
 
-      {/* Trending */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
         <div className="mb-8 flex items-end justify-between">
           <div>
             <h2 className="text-2xl font-bold uppercase tracking-tight text-neutral-900 sm:text-3xl">
               Trending Now
             </h2>
-            <p className="mt-1 text-sm text-neutral-500">The pieces everyone&apos;s talking about</p>
+            <p className="mt-1 text-sm text-neutral-500">
+              The pieces everyone&apos;s talking about
+            </p>
           </div>
           <Link
             href="/discover"
@@ -92,22 +136,33 @@ export default function HomePage() {
             View All
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
-          {trendingProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-        <div className="mt-8 text-center sm:hidden">
-          <Link
-            href="/discover"
-            className="text-sm font-semibold uppercase tracking-wider text-neutral-900 underline underline-offset-4"
-          >
-            View All
-          </Link>
-        </div>
+
+        {loading && <LoadingSpinner label="Loading trending products..." />}
+        {error && (
+          <ErrorMessage
+            message={error}
+            onRetry={() => setReloadKey((k) => k + 1)}
+          />
+        )}
+        {!loading && !error && (
+          <>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+              {trending.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+            <div className="mt-8 text-center sm:hidden">
+              <Link
+                href="/discover"
+                className="text-sm font-semibold uppercase tracking-wider text-neutral-900 underline underline-offset-4"
+              >
+                View All
+              </Link>
+            </div>
+          </>
+        )}
       </section>
 
-      {/* Editorial banner */}
       <section className="relative mx-4 mb-12 overflow-hidden sm:mx-6 lg:mx-auto lg:max-w-7xl">
         <div className="relative aspect-[21/9] min-h-[200px]">
           <Image

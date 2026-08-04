@@ -4,7 +4,10 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
-import { allProducts } from "@/lib/dummy-data";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorMessage from "@/components/ErrorMessage";
+import { apiFetch } from "@/lib/api";
+import { mapApiProduct, type ApiProduct } from "@/lib/mappers";
 import { matchProductsByPrompt } from "@/lib/dummy-recommend";
 import type { Product } from "@/lib/types";
 
@@ -14,13 +17,40 @@ function StyleResultsContent() {
   const queryParam = searchParams.get("q") ?? "";
 
   const [prompt, setPrompt] = useState(queryParam);
+  const [catalog, setCatalog] = useState<Product[]>([]);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Product[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCatalogLoading(true);
+    setCatalogError(null);
+
+    apiFetch<ApiProduct[]>("/products")
+      .then((data) => {
+        if (!cancelled) setCatalog(data.map(mapApiProduct));
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setCatalogError(err.message || "Failed to load catalog");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   useEffect(() => {
     setPrompt(queryParam);
-    if (!queryParam.trim()) {
+    if (!queryParam.trim() || catalogLoading || catalogError) {
       setResults([]);
       setHasSearched(false);
       setLoading(false);
@@ -31,14 +61,15 @@ function StyleResultsContent() {
     setHasSearched(false);
 
     const timer = setTimeout(() => {
-      const matched = matchProductsByPrompt(queryParam, allProducts);
+      // Keyword matching stays frontend-only until AI semantic search is ready
+      const matched = matchProductsByPrompt(queryParam, catalog);
       setResults(matched);
       setLoading(false);
       setHasSearched(true);
     }, 800);
 
     return () => clearTimeout(timer);
-  }, [queryParam]);
+  }, [queryParam, catalog, catalogLoading, catalogError]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +84,18 @@ function StyleResultsContent() {
           href="/"
           className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-neutral-500 transition-colors hover:text-neutral-900"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 19.5L8.25 12l7.5-7.5"
+            />
           </svg>
           Back to Home
         </Link>
@@ -62,7 +103,8 @@ function StyleResultsContent() {
           Find Your Style
         </h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Describe what you&apos;re looking for and we&apos;ll match pieces from our catalog
+          Describe what you&apos;re looking for and we&apos;ll match pieces from
+          our catalog
         </p>
       </div>
 
@@ -76,24 +118,26 @@ function StyleResultsContent() {
         />
         <button
           type="submit"
-          disabled={!prompt.trim() || loading}
+          disabled={!prompt.trim() || loading || catalogLoading}
           className="bg-accent px-8 py-3 text-sm font-bold uppercase tracking-widest text-black transition-colors hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Thinking..." : "Get Recommendations"}
         </button>
       </form>
 
-      {loading && (
-        <div className="flex items-center justify-center gap-3 py-16 text-sm text-neutral-500">
-          <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          Thinking...
-        </div>
+      {catalogLoading && <LoadingSpinner label="Loading catalog..." />}
+      {catalogError && (
+        <ErrorMessage
+          message={catalogError}
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
       )}
 
-      {hasSearched && !loading && (
+      {loading && (
+        <LoadingSpinner label="Thinking..." />
+      )}
+
+      {hasSearched && !loading && !catalogError && (
         <div>
           <h2 className="mb-2 text-lg font-bold uppercase tracking-tight text-neutral-900">
             Here&apos;s what we found for you
@@ -122,7 +166,7 @@ function StyleResultsContent() {
 
 export default function StylePage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-neutral-500">Loading...</div>}>
+    <Suspense fallback={<LoadingSpinner label="Loading..." />}>
       <StyleResultsContent />
     </Suspense>
   );
