@@ -61,7 +61,10 @@ export default function DashboardTable({ products }: DashboardTableProps) {
                 >
                   <td className="px-6 py-4">
                     <p className="font-medium text-stone-900">{product.title}</p>
-                    <p className="text-xs text-stone-500">{product.brand}</p>
+                    <p className="text-xs text-stone-500">
+                      {product.brand}
+                      {product.source === "shopify" ? " · Shopify" : ""}
+                    </p>
                   </td>
                   <td className="px-6 py-4 text-stone-700">
                     ${product.price.toFixed(0)}

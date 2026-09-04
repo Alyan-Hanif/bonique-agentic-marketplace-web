@@ -95,11 +95,19 @@ async function main() {
     {
       method: "POST",
       headers: { ...auth, "Content-Type": "application/json" },
-      body: JSON.stringify({ provider: "shopify" }),
+      body: JSON.stringify({
+        provider: "shopify",
+        shop: "bonique-jkipnajl.myshopify.com",
+      }),
     }
   );
   assert(connectRes.ok && connectBody.success, `Connect failed: ${connectBody.message}`);
-  console.log(`✓ Platform connect stub OK: ${connectBody.data.status}`);
+  assert(
+    connectBody.data?.authorizeUrl &&
+      String(connectBody.data.authorizeUrl).includes("/admin/oauth/authorize"),
+    "Connect should return Shopify authorizeUrl"
+  );
+  console.log(`✓ Shopify OAuth start OK: ${connectBody.data.status}`);
 
   console.log("\n=== 3. Frontend pages load (no 500) ===");
   for (const path of ["/", "/discover", `/product/${sampleId}`, "/style", "/login"]) {

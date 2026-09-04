@@ -12,9 +12,20 @@ export default function MerchantLayout({
           <Link href="/" className="text-lg font-semibold tracking-tight text-stone-900">
             Bonique
           </Link>
-          <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium uppercase tracking-wider text-stone-600">
-            Merchant Portal
-          </span>
+          <nav className="flex items-center gap-4 text-sm text-stone-600">
+            <Link href="/dashboard" className="hover:text-stone-900">
+              Dashboard
+            </Link>
+            <Link href="/connect" className="hover:text-stone-900">
+              Connect store
+            </Link>
+            <Link href="/discover" className="hover:text-stone-900">
+              Shop
+            </Link>
+            <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium uppercase tracking-wider text-stone-600">
+              Merchant Portal
+            </span>
+          </nav>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>

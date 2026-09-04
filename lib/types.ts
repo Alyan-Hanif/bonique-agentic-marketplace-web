@@ -39,6 +39,7 @@ export interface SyncJob {
 export interface MerchantProduct extends Product {
   merchantId: string;
   lastSyncedAt: string;
+  source?: "shopify" | "manual";
 }
 
 export interface ProductFilters {

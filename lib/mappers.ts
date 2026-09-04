@@ -24,6 +24,7 @@ export interface ApiImage {
 export interface ApiProduct {
   id: string;
   merchantId?: string;
+  externalId?: string | null;
   title: string;
   brand?: string | null;
   description?: string | null;
@@ -103,11 +104,12 @@ export function mapApiProduct(p: ApiProduct): Product {
 }
 
 export function mapApiMerchantProduct(p: ApiProduct): MerchantProduct {
+  const externalId = p.externalId ?? "";
   return {
     ...mapApiProduct(p),
     merchantId: p.merchantId ?? "",
-    lastSyncedAt:
-      p.lastVerifiedAt ?? new Date().toISOString(),
+    lastSyncedAt: p.lastVerifiedAt ?? new Date().toISOString(),
+    source: /^\d+$/.test(externalId) ? "shopify" : "manual",
   };
 }
 

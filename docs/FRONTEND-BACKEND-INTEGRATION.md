@@ -132,8 +132,8 @@ Mappers live in `lib/mappers.ts`: `mapApiProduct`, `mapApiMerchantProduct`, `get
 | `/product/[id]` | `GET /products/:id` | No |
 | `/style` | `GET /products`, then **local** `matchProductsByPrompt` | No |
 | `/login` | `POST /auth/login` → save JWT | — |
-| `/dashboard` | `GET /merchants/me`, `GET /merchants/:id/products`, `GET /sync-jobs` | Bearer JWT |
-| `/connect` | `POST /platform-connections/connect` `{ provider }` | Bearer JWT |
+| `/dashboard` | `GET /merchants/me`, `GET /merchants/:id/products`, `GET /sync-jobs`, `GET /shopify/status`; **Sync catalog** calls `POST /shopify/sync/products` | Bearer JWT |
+| `/connect` | `GET /shopify/status`; **Connect Shopify** calls `POST /platform-connections/connect` `{ provider, shop }` then redirects to Shopify OAuth | Bearer JWT |
 
 ### Style recommender note
 

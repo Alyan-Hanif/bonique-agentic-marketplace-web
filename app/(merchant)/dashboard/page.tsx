@@ -17,12 +17,16 @@ import {
   type ApiSyncJob,
 } from "@/lib/mappers";
 import type { MerchantProduct, SyncJob } from "@/lib/types";
+import type { ShopifyProductSyncResult, ShopifyStatus } from "@/lib/shopify";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [merchantName, setMerchantName] = useState("Your store");
   const [products, setProducts] = useState<MerchantProduct[]>([]);
   const [syncJob, setSyncJob] = useState<SyncJob | null>(null);
+  const [shopify, setShopify] = useState<ShopifyStatus | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -36,7 +40,9 @@ export default function DashboardPage() {
     }
 
     let cancelled = false;
-    setLoading(true);
+    if (reloadKey === 0) {
+      setLoading(true);
+    }
     setError(null);
 
     const headers = authHeaders();
@@ -47,11 +53,15 @@ export default function DashboardPage() {
         headers,
       }),
       apiFetch<ApiSyncJob[]>("/sync-jobs", { headers }),
+      apiFetch<ShopifyStatus>("/shopify/status", { headers }).catch(
+        () => null,
+      ),
     ])
-      .then(([merchant, merchantProducts, jobs]) => {
+      .then(([merchant, merchantProducts, jobs, shopifyStatus]) => {
         if (cancelled) return;
         setMerchantName(merchant.businessName);
         setProducts(merchantProducts.map(mapApiMerchantProduct));
+        setShopify(shopifyStatus);
 
         const latest = jobs[0];
         if (latest) {
@@ -87,6 +97,30 @@ export default function DashboardPage() {
     };
   }, [router, reloadKey]);
 
+  const handleShopifySync = async () => {
+    setSyncing(true);
+    setSyncMessage(null);
+    try {
+      const result = await apiFetch<ShopifyProductSyncResult>(
+        "/shopify/sync/products",
+        {
+          method: "POST",
+          headers: authHeaders(),
+        },
+      );
+      setSyncMessage(
+        `Synced ${result.productsProcessed} Shopify products (${result.productsCreated} new, ${result.productsUpdated} updated) from ${result.shop}.`,
+      );
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      setSyncMessage(
+        err instanceof Error ? err.message : "Shopify sync failed",
+      );
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner label="Loading dashboard..." />;
   }
@@ -115,9 +149,40 @@ export default function DashboardPage() {
           href="/connect"
           className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-6 py-2.5 text-sm font-medium text-stone-900 transition-colors hover:border-stone-400"
         >
-          Connect another store
+          {shopify?.authenticated ? "Manage Shopify" : "Connect Shopify"}
         </Link>
       </div>
+
+      {shopify && (
+        <div className="rounded-lg border border-stone-200 bg-white p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-stone-900">
+                Shopify{" "}
+                {shopify.authenticated ? "connected" : "not connected"}
+              </p>
+              <p className="mt-1 text-xs text-stone-500">
+                {shopify.connection?.externalShopId ||
+                  "Connect a store to import the live catalog."}
+                {shopify.connection?.scopes?.length
+                  ? ` · ${shopify.connection.scopes.join(", ")}`
+                  : ""}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleShopifySync}
+              disabled={!shopify.authenticated || syncing}
+              className="inline-flex items-center justify-center rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {syncing ? "Syncing catalog..." : "Sync Shopify catalog"}
+            </button>
+          </div>
+          {syncMessage && (
+            <p className="mt-3 text-sm text-stone-600">{syncMessage}</p>
+          )}
+        </div>
+      )}
 
       {syncJob && (
         <div className="flex items-center gap-3 rounded-lg border border-stone-200 bg-white p-4">
