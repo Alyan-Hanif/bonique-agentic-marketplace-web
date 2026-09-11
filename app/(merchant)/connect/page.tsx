@@ -4,35 +4,35 @@ import { FormEvent, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { authHeaders, clearAuth, getAccessToken } from "@/lib/auth";
+import { authHeaders } from "@/lib/auth";
 import {
   normalizeShopDomain,
   type ShopifyConnectStart,
   type ShopifyStatus,
 } from "@/lib/shopify";
+import { useSellerOnly } from "@/lib/use-buyer-only";
+import { showToast } from "@/lib/toast";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
-function OAuthBanner() {
+function OAuthToasts() {
   const searchParams = useSearchParams();
-  const shopify = searchParams.get("shopify");
-  const shop = searchParams.get("shop");
-  const message = searchParams.get("message");
+  const router = useRouter();
 
-  if (shopify === "connected") {
-    return (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-        Shopify connected{shop ? ` for ${shop}` : ""}. You can sync the catalog
-        from the dashboard.
-      </div>
-    );
-  }
-
-  if (shopify === "error") {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        {message || "Shopify authorization failed."}
-      </div>
-    );
-  }
+  useEffect(() => {
+    const shopify = searchParams.get("shopify");
+    const shop = searchParams.get("shop");
+    const message = searchParams.get("message");
+    if (shopify === "connected") {
+      showToast(
+        shop ? `Shopify connected for ${shop}` : "Shopify connected",
+        "success",
+      );
+      router.replace("/connect");
+    } else if (shopify === "error") {
+      showToast(message || "Shopify authorization failed.", "error");
+      router.replace("/connect");
+    }
+  }, [searchParams, router]);
 
   return null;
 }
@@ -41,7 +41,6 @@ function ShopifyConnectCard() {
   const [status, setStatus] = useState<ShopifyStatus | null>(null);
   const [shop, setShop] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +53,9 @@ function ShopifyConnectCard() {
         }
       })
       .catch((err: Error) => {
-        if (!cancelled) setError(err.message);
+        if (!cancelled) {
+          showToast(err.message || "Could not load Shopify status", "error");
+        }
       });
     return () => {
       cancelled = true;
@@ -66,7 +67,6 @@ function ShopifyConnectCard() {
   const handleConnect = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     try {
       const normalized = normalizeShopDomain(shop);
       const result = await apiFetch<ShopifyConnectStart>(
@@ -82,7 +82,10 @@ function ShopifyConnectCard() {
       }
       window.location.href = result.authorizeUrl;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Connection failed");
+      showToast(
+        err instanceof Error ? err.message : "Connection failed",
+        "error",
+      );
       setLoading(false);
     }
   };
@@ -124,7 +127,6 @@ function ShopifyConnectCard() {
             className="mt-1 w-full rounded-lg border border-stone-200 px-4 py-2.5 text-sm text-stone-900 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
           />
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
           disabled={loading || !shop.trim()}
@@ -142,14 +144,11 @@ function ShopifyConnectCard() {
 }
 
 export default function ConnectPage() {
-  const router = useRouter();
+  const allowed = useSellerOnly();
 
-  useEffect(() => {
-    if (!getAccessToken()) {
-      clearAuth();
-      router.replace("/login");
-    }
-  }, [router]);
+  if (!allowed) {
+    return <LoadingSpinner label="Loading..." />;
+  }
 
   return (
     <div className="space-y-8">
@@ -182,26 +181,11 @@ export default function ConnectPage() {
       </div>
 
       <Suspense fallback={null}>
-        <OAuthBanner />
+        <OAuthToasts />
       </Suspense>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="max-w-xl">
         <ShopifyConnectCard />
-        <div className="flex flex-col rounded-lg border border-stone-200 bg-white p-8 opacity-70">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-stone-100 text-xl font-bold text-stone-700">
-            Sq
-          </div>
-          <h3 className="text-lg font-semibold text-stone-900">Squarespace</h3>
-          <p className="mt-2 flex-1 text-sm text-stone-500">
-            Squarespace is not wired yet. Shopify is the supported integration.
-          </p>
-          <button
-            disabled
-            className="mt-6 rounded-full border border-stone-200 py-3 text-sm font-medium uppercase tracking-wider text-stone-400"
-          >
-            Coming soon
-          </button>
-        </div>
       </div>
     </div>
   );

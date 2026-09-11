@@ -10,8 +10,10 @@ import { apiFetch } from "@/lib/api";
 import { mapApiProduct, type ApiProduct } from "@/lib/mappers";
 import { matchProductsByPrompt } from "@/lib/dummy-recommend";
 import type { Product } from "@/lib/types";
+import { useBlockSellers } from "@/lib/use-buyer-only";
 
 function StyleResultsContent() {
+  const ready = useBlockSellers();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryParam = searchParams.get("q") ?? "";
@@ -26,6 +28,7 @@ function StyleResultsContent() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    if (!ready) return;
     let cancelled = false;
     setCatalogLoading(true);
     setCatalogError(null);
@@ -46,7 +49,7 @@ function StyleResultsContent() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [reloadKey, ready]);
 
   useEffect(() => {
     setPrompt(queryParam);
@@ -76,6 +79,8 @@ function StyleResultsContent() {
     if (!prompt.trim()) return;
     router.push(`/style?q=${encodeURIComponent(prompt.trim())}`);
   };
+
+  if (!ready) return <LoadingSpinner label="Loading..." />;
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">

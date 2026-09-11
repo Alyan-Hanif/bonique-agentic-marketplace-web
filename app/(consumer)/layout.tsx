@@ -1,6 +1,12 @@
+import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import ConsumerHeader from "@/components/ConsumerHeader";
 import ConsumerFooter from "@/components/ConsumerFooter";
-import StyleRecommender from "@/components/StyleRecommender";
+import KeepSellersOnDashboard from "@/components/KeepSellersOnDashboard";
+
+const StyleRecommender = dynamic(() => import("@/components/StyleRecommender"), {
+  ssr: false,
+});
 
 export default function ConsumerLayout({
   children,
@@ -8,11 +14,15 @@ export default function ConsumerLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <ConsumerHeader />
-      <main className="flex-1">{children}</main>
-      <ConsumerFooter />
-      <StyleRecommender />
-    </div>
+    <KeepSellersOnDashboard>
+      <div className="flex min-h-screen flex-col bg-white">
+        <Suspense>
+          <ConsumerHeader />
+        </Suspense>
+        <main className="flex-1">{children}</main>
+        <ConsumerFooter />
+        <StyleRecommender />
+      </div>
+    </KeepSellersOnDashboard>
   );
 }

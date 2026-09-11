@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
+import { getAuthUser, isSeller } from "@/lib/auth";
 
 const DRAG_THRESHOLD = 8;
 const STORAGE_KEY = "bonique-style-fab-position";
@@ -33,6 +34,7 @@ function clampPosition(x: number, y: number, width: number, height: number): Pos
 export default function StyleRecommender() {
   const router = useRouter();
   const pathname = usePathname();
+  const [seller, setSeller] = useState(false);
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [position, setPosition] = useState<Position | null>(null);
@@ -46,6 +48,10 @@ export default function StyleRecommender() {
     originY: 0,
     pointerId: -1,
   });
+
+  useEffect(() => {
+    setSeller(isSeller(getAuthUser()));
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -128,7 +134,7 @@ export default function StyleRecommender() {
     setPrompt("");
   };
 
-  if (pathname === "/style" || !position) return null;
+  if (seller || pathname === "/style" || !position) return null;
 
   return (
     <>

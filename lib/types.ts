@@ -11,6 +11,8 @@ export interface Product {
   careInstructions: string;
   images: string[];
   variants: ProductVariant[];
+  source?: "native" | "shopify";
+  handoverUrl?: string | null;
 }
 
 export interface ProductVariant {

@@ -109,12 +109,12 @@ function DiscoverContent() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">
+    <div className="page-shell space-y-8">
       <div>
-        <h1 className="text-2xl font-bold uppercase tracking-tight text-neutral-900 sm:text-3xl">
+        <h1 className="font-serif text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
           {pageTitle}
         </h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1.5 text-sm text-neutral-500">
           {filteredProducts.length} product
           {filteredProducts.length !== 1 ? "s" : ""}
         </p>
@@ -133,12 +133,12 @@ function DiscoverContent() {
 
         <div>
           {filteredProducts.length === 0 ? (
-            <div className="border border-neutral-200 bg-neutral-50 p-12 text-center text-sm text-neutral-500">
+            <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-12 text-center text-sm text-neutral-500">
               No products match your filters. Try adjusting your search or
               filters.
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+            <div className="stagger-in grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

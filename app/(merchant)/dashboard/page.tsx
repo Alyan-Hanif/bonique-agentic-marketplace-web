@@ -8,7 +8,13 @@ import SyncStatusBadge from "@/components/SyncStatusBadge";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorMessage from "@/components/ErrorMessage";
 import { apiFetch } from "@/lib/api";
-import { authHeaders, clearAuth, getAccessToken, getAuthUser } from "@/lib/auth";
+import {
+  authHeaders,
+  clearAuth,
+  getAccessToken,
+  getAuthUser,
+  isSeller,
+} from "@/lib/auth";
 import {
   mapApiMerchantProduct,
   mapSyncStatus,
@@ -18,15 +24,18 @@ import {
 } from "@/lib/mappers";
 import type { MerchantProduct, SyncJob } from "@/lib/types";
 import type { ShopifyProductSyncResult, ShopifyStatus } from "@/lib/shopify";
+import type { MerchantOrder } from "@/lib/commerce";
+import DashboardOverview from "@/components/DashboardOverview";
+import { showToast } from "@/lib/toast";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [merchantName, setMerchantName] = useState("Your store");
   const [products, setProducts] = useState<MerchantProduct[]>([]);
+  const [orders, setOrders] = useState<MerchantOrder[]>([]);
   const [syncJob, setSyncJob] = useState<SyncJob | null>(null);
   const [shopify, setShopify] = useState<ShopifyStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -34,10 +43,12 @@ export default function DashboardPage() {
   useEffect(() => {
     const token = getAccessToken();
     const user = getAuthUser();
-    if (!token || !user?.merchantId) {
-      router.replace("/login");
+    if (!token || !user || !isSeller(user) || !user.merchantId) {
+      router.replace(token ? "/account" : "/login");
       return;
     }
+
+    const merchantId = user.merchantId;
 
     let cancelled = false;
     if (reloadKey === 0) {
@@ -49,36 +60,40 @@ export default function DashboardPage() {
 
     Promise.all([
       apiFetch<ApiMerchant>("/merchants/me", { headers }),
-      apiFetch<ApiProduct[]>(`/merchants/${user.merchantId}/products`, {
+      apiFetch<ApiProduct[]>(`/merchants/${merchantId}/products`, {
         headers,
       }),
       apiFetch<ApiSyncJob[]>("/sync-jobs", { headers }),
-      apiFetch<ShopifyStatus>("/shopify/status", { headers }).catch(
-        () => null,
+      apiFetch<ShopifyStatus>("/shopify/status", { headers }).catch(() => null),
+      apiFetch<MerchantOrder[]>("/merchants/me/orders", { headers }).catch(
+        () => [] as MerchantOrder[],
       ),
     ])
-      .then(([merchant, merchantProducts, jobs, shopifyStatus]) => {
-        if (cancelled) return;
-        setMerchantName(merchant.businessName);
-        setProducts(merchantProducts.map(mapApiMerchantProduct));
-        setShopify(shopifyStatus);
+      .then(
+        ([merchant, merchantProducts, jobs, shopifyStatus, merchantOrders]) => {
+          if (cancelled) return;
+          setMerchantName(merchant.businessName);
+          setProducts(merchantProducts.map(mapApiMerchantProduct));
+          setOrders(merchantOrders);
+          setShopify(shopifyStatus);
 
-        const latest = jobs[0];
-        if (latest) {
-          setSyncJob({
-            id: latest.id,
-            merchantName: merchant.businessName,
-            status: mapSyncStatus(latest.status),
-            lastSyncedAt:
-              latest.completedAt ||
-              latest.startedAt ||
-              latest.createdAt ||
-              new Date().toISOString(),
-          });
-        } else {
-          setSyncJob(null);
-        }
-      })
+          const latest = jobs[0];
+          if (latest) {
+            setSyncJob({
+              id: latest.id,
+              merchantName: merchant.businessName,
+              status: mapSyncStatus(latest.status),
+              lastSyncedAt:
+                latest.completedAt ||
+                latest.startedAt ||
+                latest.createdAt ||
+                new Date().toISOString(),
+            });
+          } else {
+            setSyncJob(null);
+          }
+        },
+      )
       .catch((err: Error & { statusCode?: number }) => {
         if (cancelled) return;
         if (err.statusCode === 401) {
@@ -99,7 +114,6 @@ export default function DashboardPage() {
 
   const handleShopifySync = async () => {
     setSyncing(true);
-    setSyncMessage(null);
     try {
       const result = await apiFetch<ShopifyProductSyncResult>(
         "/shopify/sync/products",
@@ -108,13 +122,15 @@ export default function DashboardPage() {
           headers: authHeaders(),
         },
       );
-      setSyncMessage(
+      showToast(
         `Synced ${result.productsProcessed} Shopify products (${result.productsCreated} new, ${result.productsUpdated} updated) from ${result.shop}.`,
+        "success",
       );
       setReloadKey((k) => k + 1);
     } catch (err) {
-      setSyncMessage(
+      showToast(
         err instanceof Error ? err.message : "Shopify sync failed",
+        "error",
       );
     } finally {
       setSyncing(false);
@@ -153,13 +169,14 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      <DashboardOverview productCount={products.length} orders={orders} />
+
       {shopify && (
         <div className="rounded-lg border border-stone-200 bg-white p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium text-stone-900">
-                Shopify{" "}
-                {shopify.authenticated ? "connected" : "not connected"}
+                Shopify {shopify.authenticated ? "connected" : "not connected"}
               </p>
               <p className="mt-1 text-xs text-stone-500">
                 {shopify.connection?.externalShopId ||
@@ -178,9 +195,6 @@ export default function DashboardPage() {
               {syncing ? "Syncing catalog..." : "Sync Shopify catalog"}
             </button>
           </div>
-          {syncMessage && (
-            <p className="mt-3 text-sm text-stone-600">{syncMessage}</p>
-          )}
         </div>
       )}
 

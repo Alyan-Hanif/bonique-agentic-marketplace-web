@@ -1,28 +1,76 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Logo from "@/components/Logo";
+import AccountMenu from "@/components/AccountMenu";
+import CartLink from "@/components/CartLink";
+import { REVEAL_HEADER_EVENT } from "@/lib/cart-events";
+import { getAuthUser, isSeller } from "@/lib/auth";
 
-const NAV_LINKS = [
+const SHOP_LINKS = [
   { label: "New Arrivals", href: "/discover?category=new-arrivals" },
   { label: "Men", href: "/discover?category=men" },
   { label: "Women", href: "/discover?category=women" },
-  { label: "Kids", href: "/discover?category=kids" },
   { label: "Sale", href: "/discover?category=sale" },
 ];
+
+const LOOKS_LINK = { label: "Looks", href: "/looks" };
+
+function isNavActive(pathname: string, href: string, category: string | null) {
+  const [path, query] = href.split("?");
+  const params = new URLSearchParams(query || "");
+  if (path === "/looks") return pathname === "/looks" || pathname.startsWith("/looks/");
+  if (path === "/discover") {
+    if (pathname !== "/discover") return false;
+    const linkCategory = params.get("category");
+    if (linkCategory) return category === linkCategory;
+    return !category;
+  }
+  if (path === "/cart") return pathname === "/cart";
+  return pathname === path;
+}
+
+function navLinkClass(active: boolean) {
+  return `relative text-sm font-semibold uppercase tracking-widest transition-colors duration-300 hover:text-white after:absolute after:-bottom-1 after:left-0 after:h-px after:bg-white after:transition-all after:duration-300 ${
+    active ? "text-white after:w-full" : "text-neutral-400 after:w-0 hover:after:w-full"
+  }`;
+}
 
 const SCROLL_THRESHOLD = 8;
 
 export default function ConsumerHeader() {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const category = searchParams.get("category");
   const isHome = pathname === "/";
+  const isLooks = pathname === "/looks" || pathname.startsWith("/looks/");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [visible, setVisible] = useState(true);
   const [headerHeight, setHeaderHeight] = useState(64);
+  const [seller, setSeller] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    setSeller(isSeller(getAuthUser()));
+  }, []);
+
+  useEffect(() => {
+    const routes = [
+      "/",
+      "/discover",
+      "/discover?category=new-arrivals",
+      "/discover?category=men",
+      "/discover?category=women",
+      "/discover?category=sale",
+      "/looks",
+      "/cart",
+    ];
+    routes.forEach((href) => router.prefetch(href));
+  }, [router]);
 
   useEffect(() => {
     const updateHeight = () => {
@@ -59,6 +107,12 @@ export default function ConsumerHeader() {
       const currentY = window.scrollY;
       const delta = currentY - lastScrollY.current;
 
+      if (isLooks) {
+        setVisible(true);
+        lastScrollY.current = currentY;
+        return;
+      }
+
       // Stay visible while the hero section is still on screen
       if (isHome && isInHeroZone()) {
         setVisible(true);
@@ -80,7 +134,13 @@ export default function ConsumerHeader() {
 
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [isHome]);
+  }, [isHome, isLooks]);
+
+  useEffect(() => {
+    const reveal = () => setVisible(true);
+    window.addEventListener(REVEAL_HEADER_EVENT, reveal);
+    return () => window.removeEventListener(REVEAL_HEADER_EVENT, reveal);
+  }, []);
 
   return (
     <>
@@ -94,18 +154,35 @@ export default function ConsumerHeader() {
           <Logo height={40} />
 
           <nav className="hidden items-center gap-8 md:flex">
-            {NAV_LINKS.map((link) => (
+            {SHOP_LINKS.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
-                className="text-sm font-semibold uppercase tracking-widest text-neutral-300 transition-colors hover:text-accent"
+                className={navLinkClass(isNavActive(pathname, link.href, category))}
               >
                 {link.label}
               </Link>
             ))}
+            {!seller && (
+              <>
+                <span className="h-3 w-px bg-neutral-700" aria-hidden />
+                <Link
+                  href={LOOKS_LINK.href}
+                  className={navLinkClass(isNavActive(pathname, LOOKS_LINK.href, category))}
+                >
+                  {LOOKS_LINK.label}
+                </Link>
+              </>
+            )}
           </nav>
 
           <div className="flex items-center gap-4">
+            <div className="hidden md:block">
+              <AccountMenu />
+            </div>
+
+            {!seller && <CartLink />}
+
             <Link
               href="/discover"
               className="text-neutral-300 transition-colors hover:text-accent"
@@ -135,25 +212,53 @@ export default function ConsumerHeader() {
         {mobileOpen && (
           <nav className="border-t border-neutral-800 bg-black px-4 py-4 md:hidden">
             <div className="flex flex-col gap-3">
-              {NAV_LINKS.map((link) => (
+              {SHOP_LINKS.map((link) => (
                 <Link
                   key={link.label}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`text-sm font-semibold uppercase tracking-widest ${
-                    pathname === link.href ? "text-accent" : "text-neutral-300"
-                  }`}
+                  className={navLinkClass(isNavActive(pathname, link.href, category))}
                 >
                   {link.label}
                 </Link>
               ))}
+              {!seller && (
+                <Link
+                  href={LOOKS_LINK.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={navLinkClass(isNavActive(pathname, LOOKS_LINK.href, category))}
+                >
+                  {LOOKS_LINK.label}
+                </Link>
+              )}
               <Link
                 href="/discover"
                 onClick={() => setMobileOpen(false)}
-                className="text-sm font-semibold uppercase tracking-widest text-neutral-300"
+                className={navLinkClass(isNavActive(pathname, "/discover", category))}
               >
                 Shop All
               </Link>
+              {!seller && (
+                <Link
+                  href="/cart"
+                  onClick={() => setMobileOpen(false)}
+                  className={navLinkClass(isNavActive(pathname, "/cart", category))}
+                >
+                  Cart
+                </Link>
+              )}
+              {seller && (
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileOpen(false)}
+                  className="text-sm font-semibold uppercase tracking-widest text-neutral-300"
+                >
+                  Dashboard
+                </Link>
+              )}
+              <div className="border-t border-neutral-800 pt-3">
+                <AccountMenu />
+              </div>
             </div>
           </nav>
         )}

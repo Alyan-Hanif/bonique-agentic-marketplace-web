@@ -3,17 +3,21 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import IntroSplash from "@/components/IntroSplash";
 import ProductCard from "@/components/ProductCard";
+import LookCardView from "@/components/LookCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorMessage from "@/components/ErrorMessage";
 import { heroImage, editorialImage } from "@/lib/product-images";
 import { apiFetch } from "@/lib/api";
+import { authHeaders, getAuthUser, isSeller } from "@/lib/auth";
 import {
   getTrendingProducts,
   mapApiProduct,
   type ApiProduct,
 } from "@/lib/mappers";
 import type { Product } from "@/lib/types";
+import type { LookCard } from "@/lib/social";
 
 const CATEGORIES = [
   { label: "New Arrivals", href: "/discover?category=new-arrivals" },
@@ -26,27 +30,46 @@ const CATEGORIES = [
 
 export default function HomePage() {
   const [trending, setTrending] = useState<Product[]>([]);
+  const [looks, setLooks] = useState<LookCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [seller, setSeller] = useState(false);
+
+  useEffect(() => {
+    setSeller(isSeller(getAuthUser()));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    apiFetch<ApiProduct[]>("/products")
+    apiFetch<ApiProduct[]>("/products?take=24")
       .then((data) => {
         if (!cancelled) {
           setTrending(getTrendingProducts(data.map(mapApiProduct)));
+          setLoading(false);
         }
       })
       .catch((err: Error) => {
-        if (!cancelled) setError(err.message || "Failed to load products");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setError(err.message || "Failed to load products");
+          setLoading(false);
+        }
       });
+
+    if (!isSeller(getAuthUser())) {
+      apiFetch<{ looks: LookCard[] }>("/social/feed?tab=explore", {
+        headers: authHeaders(),
+      })
+        .then((feed) => {
+          if (!cancelled) setLooks(feed.looks.slice(0, 3));
+        })
+        .catch(() => {
+          if (!cancelled) setLooks([]);
+        });
+    }
 
     return () => {
       cancelled = true;
@@ -55,6 +78,7 @@ export default function HomePage() {
 
   return (
     <>
+      <IntroSplash />
       <section
         id="hero"
         className="relative flex h-[calc(100dvh-var(--consumer-header-height,4rem))] min-h-[20rem] items-center overflow-hidden"
@@ -63,28 +87,29 @@ export default function HomePage() {
           src={heroImage}
           alt="New season streetwear collection"
           fill
-          className="object-cover object-center"
+          className="animate-hero-zoom object-cover object-center"
           sizes="100vw"
           priority
           unoptimized
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
         <div className="relative mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-white/80 sm:text-sm">
+          <p className="animate-fade-up text-xs font-bold uppercase tracking-[0.3em] text-white/80 sm:text-sm">
             SS26 Collection
           </p>
-          <h1 className="mt-3 max-w-xl text-4xl font-bold uppercase leading-none tracking-tight text-white sm:text-6xl md:text-7xl">
+          <h1 className="animate-fade-up mt-3 max-w-xl text-4xl font-bold uppercase leading-none tracking-tight text-white sm:text-6xl md:text-7xl" style={{ animationDelay: "0.1s" }}>
             Define Your
             <br />
             <span className="text-accent">Street Style</span>
           </h1>
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-white/80 sm:text-base">
+          <p className="animate-fade-up mt-4 max-w-md text-sm leading-relaxed text-white/80 sm:text-base" style={{ animationDelay: "0.2s" }}>
             Bold fits. Fresh drops. Curated streetwear and fashion from the
             brands you love.
           </p>
           <Link
             href="/discover"
-            className="mt-8 inline-block bg-accent px-10 py-4 text-sm font-bold uppercase tracking-widest text-black transition-colors hover:bg-accent-dark"
+            className="animate-fade-up mt-8 inline-block rounded-full bg-accent px-10 py-4 text-sm font-bold uppercase tracking-widest text-black transition duration-300 hover:scale-105 hover:bg-accent-dark"
+            style={{ animationDelay: "0.3s" }}
           >
             Shop Now
           </Link>
@@ -98,7 +123,7 @@ export default function HomePage() {
               <Link
                 key={cat.label}
                 href={cat.href}
-                className="flex-shrink-0 border border-black px-5 py-2 text-xs font-bold uppercase tracking-wider text-black transition-colors hover:bg-black hover:text-accent"
+                className="flex-shrink-0 rounded-full border border-black px-5 py-2 text-xs font-bold uppercase tracking-wider text-black transition duration-300 hover:scale-105 hover:bg-black hover:text-white"
               >
                 {cat.label}
               </Link>
@@ -146,7 +171,7 @@ export default function HomePage() {
         )}
         {!loading && !error && (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+            <div className="stagger-in grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-6">
               {trending.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -163,6 +188,40 @@ export default function HomePage() {
         )}
       </section>
 
+      {!seller && looks.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 sm:pb-16">
+          <div className="mb-8 flex items-end justify-between">
+            <div>
+              <h2 className="text-2xl font-bold uppercase tracking-tight text-neutral-900 sm:text-3xl font-serif">
+                Looks
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Like, comment, and shop outfits from the community
+              </p>
+            </div>
+            <Link
+              href="/looks"
+              className="hidden text-sm font-semibold uppercase tracking-wider text-neutral-900 underline underline-offset-4 hover:text-accent sm:block"
+            >
+              Open Looks
+            </Link>
+          </div>
+          <div className="stagger-in grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {looks.map((look) => (
+              <LookCardView key={look.id} look={look} />
+            ))}
+          </div>
+          <div className="mt-8 text-center sm:hidden">
+            <Link
+              href="/looks"
+              className="text-sm font-semibold uppercase tracking-wider text-neutral-900 underline underline-offset-4"
+            >
+              Open Looks
+            </Link>
+          </div>
+        </section>
+      )}
+
       <section className="relative mx-4 mb-12 overflow-hidden sm:mx-6 lg:mx-auto lg:max-w-7xl">
         <div className="relative aspect-[21/9] min-h-[200px]">
           <Image
@@ -172,14 +231,14 @@ export default function HomePage() {
             className="object-cover"
             unoptimized
           />
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 transition duration-500 hover:bg-black/50">
             <div className="text-center">
               <h3 className="text-2xl font-bold uppercase tracking-tight text-white sm:text-4xl">
                 Street. Bold. You.
               </h3>
               <Link
                 href="/discover?category=new-arrivals"
-                className="mt-4 inline-block border-2 border-accent px-8 py-3 text-xs font-bold uppercase tracking-widest text-accent transition-colors hover:bg-accent hover:text-black"
+                className="mt-4 inline-block rounded-full border-2 border-accent px-8 py-3 text-xs font-bold uppercase tracking-widest text-accent transition duration-300 hover:scale-105 hover:bg-accent hover:text-black"
               >
                 Explore New Arrivals
               </Link>

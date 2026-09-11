@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [{ source: "/feed", destination: "/looks", permanent: false }];
+  },
   images: {
     remotePatterns: [
       {

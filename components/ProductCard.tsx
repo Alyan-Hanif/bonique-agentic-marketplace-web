@@ -14,8 +14,8 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
   return (
     <Link
       href={`/product/${product.id}`}
-      className={`group flex flex-col overflow-hidden bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
-        compact ? "" : "rounded-sm"
+      className={`group flex flex-col overflow-hidden bg-white transition-all duration-500 ease-out hover:-translate-y-1.5 hover:shadow-2xl ${
+        compact ? "rounded-xl" : "rounded-2xl"
       }`}
     >
       <div className="relative aspect-[4/5] overflow-hidden bg-neutral-100">
@@ -24,7 +24,7 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
           alt={product.title}
           productId={product.id}
           fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           sizes={compact ? "176px" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"}
         />
         {onSale && (
@@ -37,6 +37,9 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
             New
           </span>
         )}
+        <span className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8 text-xs font-semibold uppercase tracking-widest text-white opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+          View
+        </span>
       </div>
       <div className={`flex flex-1 flex-col ${compact ? "gap-1 p-2" : "gap-1.5 p-3"}`}>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">

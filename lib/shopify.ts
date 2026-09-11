@@ -38,6 +38,13 @@ export interface ShopifyProductSyncResult {
   syncJobId: string | null;
 }
 
+export interface ShopifyDisconnectResult {
+  disconnected: boolean;
+  shop: string;
+  shopifyUninstalled: boolean;
+  message: string;
+}
+
 export function normalizeShopDomain(raw: string): string {
   let shop = raw.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
   if (shop && !shop.includes(".")) {

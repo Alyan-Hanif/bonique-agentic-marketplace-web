@@ -36,6 +36,8 @@ export interface ApiProduct {
   lastVerifiedAt?: string | null;
   images?: ApiImage[];
   variants?: ApiVariant[];
+  source?: string | null;
+  handoverLinks?: Array<{ destinationUrl: string }>;
 }
 
 export interface ApiMerchant {
@@ -100,6 +102,8 @@ export function mapApiProduct(p: ApiProduct): Product {
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
       .map((img) => img.url),
     variants: (p.variants ?? []).map(mapApiVariant),
+    source: p.source === "shopify" ? "shopify" : "native",
+    handoverUrl: p.handoverLinks?.[0]?.destinationUrl ?? null,
   };
 }
 

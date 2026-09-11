@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
-import { saveAuth, type AuthUser } from "@/lib/auth";
+import { getAccessToken, getAuthUser, postLoginPath, saveAuth, type AuthUser } from "@/lib/auth";
+import { showToast } from "@/lib/toast";
+import PasswordField from "@/components/PasswordField";
 
 interface LoginResponse {
   accessToken: string;
@@ -13,15 +15,21 @@ interface LoginResponse {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@bonique.test");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    const user = getAuthUser();
+    if (token && user) {
+      router.replace(postLoginPath(user));
+    }
+  }, [router]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     try {
       const data = await apiFetch<LoginResponse>("/auth/login", {
@@ -29,9 +37,10 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       saveAuth(data.accessToken, data.user);
-      router.push("/dashboard");
+      showToast("Signed in", "success");
+      router.push(postLoginPath(data.user));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      showToast(err instanceof Error ? err.message : "Login failed", "error");
     } finally {
       setLoading(false);
     }
@@ -41,11 +50,9 @@ export default function LoginPage() {
     <div className="flex min-h-[70vh] items-center justify-center">
       <div className="w-full max-w-md">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-stone-900">
-            Merchant Login
-          </h1>
+          <h1 className="text-2xl font-semibold text-stone-900">Sign in</h1>
           <p className="mt-2 text-sm text-stone-500">
-            Sign in to manage your store and products
+            Shoppers go to their account. Brands go to the dashboard.
           </p>
         </div>
 
@@ -53,12 +60,6 @@ export default function LoginPage() {
           onSubmit={handleSubmit}
           className="mt-8 space-y-5 rounded-lg border border-stone-200 bg-white p-8"
         >
-          {error && (
-            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
           <div>
             <label
               htmlFor="email"
@@ -73,7 +74,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="mt-1 w-full rounded-lg border border-stone-200 px-4 py-2.5 text-sm text-stone-900 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
-              placeholder="you@store.com"
+              placeholder="you@email.com"
             />
           </div>
 
@@ -84,13 +85,13 @@ export default function LoginPage() {
             >
               Password
             </label>
-            <input
+            <PasswordField
               id="password"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1 w-full rounded-lg border border-stone-200 px-4 py-2.5 text-sm text-stone-900 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
+              autoComplete="current-password"
+              className="border-stone-200 text-stone-900 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
               placeholder="••••••••"
             />
           </div>
@@ -104,8 +105,18 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-stone-400">
-          Use seeded credentials: admin@bonique.test / password123.{" "}
+        <p className="mt-6 text-center text-sm text-stone-500">
+          New here?{" "}
+          <Link href="/register?as=shop" className="underline hover:text-stone-900">
+            Join as shopper
+          </Link>
+          {" · "}
+          <Link href="/register?as=sell" className="underline hover:text-stone-900">
+            Sell as a brand
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-xs text-stone-400">
+          Demo: shopper@bonique.test or admin@bonique.test / password123.{" "}
           <Link href="/discover" className="underline hover:text-stone-600">
             Back to shop
           </Link>
